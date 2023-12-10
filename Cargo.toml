@@ -57,6 +57,8 @@ num_cpus = "1.16.0"
 hyper-rustls = "0.24.2"
 rustls = "0.21.9"
 rustls-pemfile = "1.0.4"
+http = { version = "0.2.11", features = [] }
+bytes = "1.5.0"
 
 [dev-dependencies]
 criterion = "0.5.1"

@@ -12,6 +12,7 @@ mod response;
 mod server;
 mod server_config;
 mod server_context;
+mod request_handlers;
 
 use std::time::Duration;
 
