@@ -4,12 +4,14 @@ use hyper::{Body, Request, Response};
 use serde::de::DeserializeOwned;
 use crate::async_graphql_hyper::{GraphQLRequestLike, GraphQLResponse};
 use crate::http::request_handler::update_response_headers;
+use crate::http::request_handlers::api_request_handlers::handler::ApiReqHandler;
 use crate::http::ServerContext;
 
 pub async fn api_request<T: DeserializeOwned + GraphQLRequestLike>(
     req: Request<Body>,
     server_ctx: &ServerContext,
 ) -> anyhow::Result<Response<Body>> {
+    ApiReqHandler::init(&server_ctx.blueprint.definitions);
     let req_ctx = Arc::new(crate::http::request_handler::create_request_context(&req, server_ctx));
     let bytes = hyper::body::to_bytes(req.into_body()).await?;
     let request = serde_json::from_slice::<T>(&bytes);
