@@ -1,7 +1,10 @@
-mod cache;
+mod request;
+mod response;
 
 use std::sync::{Arc, RwLock};
 
+use cached::proc_macro::cached;
+use cached::TimedSizedCache;
 use lazy_static::lazy_static;
 use tailcall::async_graphql_hyper::GraphQLRequest;
 use tailcall::blueprint::Blueprint;
@@ -10,16 +13,8 @@ use tailcall::config::Config;
 use tailcall::http::{handle_request, DefaultHttpClient, ServerContext};
 use worker::*;
 
-use crate::cache::TTLCache;
-
 lazy_static! {
   static ref SERV_CTX: RwLock<Option<Arc<ServerContext>>> = RwLock::new(None);
-}
-
-lazy_static! {
-    static ref CACHE: RwLock<TTLCache> = {
-        RwLock::new(TTLCache::new(1000,100)) // change the values to change capacity and TTL (in secs) respectively
-    };
 }
 
 async fn make_req() -> Result<Config> {
@@ -33,76 +28,39 @@ async fn make_req() -> Result<Config> {
 }
 
 #[event(fetch)]
-async fn main(mut req: Request, _: Env, _: Context) -> Result<Response> {
-  let body = req.text().await?;
-  if let Some(x) = CACHE.write().unwrap().get(&body) {
-    return Response::from_body(ResponseBody::Body(x.as_bytes().to_vec()));
-  }
-  let mut server_ctx = get_option().await;
+async fn main(wrk_req: Request, _: Env, _: Context) -> Result<Response> {
+  let server_ctx = get_option().await;
   if server_ctx.is_none() {
     let cfg = make_req().await.map_err(conv_err)?;
     let blueprint = Blueprint::try_from(&cfg).map_err(conv_err)?;
     let http_client = Arc::new(DefaultHttpClient::new(&blueprint.upstream));
     let serv_ctx = Arc::new(ServerContext::new(blueprint, http_client));
     *SERV_CTX.write().unwrap() = Some(serv_ctx.clone());
-    server_ctx = Some(serv_ctx);
   }
-  let resp = handle_request::<GraphQLRequest>(
-    convert_to_hyper_request(req, body.clone()).await?,
-    server_ctx.ok_or(Error::from("Unable to initiate connection"))?.clone(),
-  )
-  .await
-  .map_err(conv_err)?;
-  let mut resp = make_request(resp).await.map_err(conv_err)?;
-  let val = resp.text().await?;
-  CACHE.write().unwrap().put(body.clone(), val);
+  let resp = mkreq(wrk_req).await?;
   Ok(resp)
+}
+
+async fn mkreq(wrk_req: Request) -> Result<Response> {
+  let response = make_internal(request::Request::wrk_to_req(wrk_req).await?).await;
+  response.response_to_wrk()
+}
+#[cached(
+  type = "TimedSizedCache<request::Request, response::Response>",
+  create = "{ TimedSizedCache::with_size_and_lifespan(1000,10) }"
+)]
+async fn make_internal(wrk_req: request::Request) -> response::Response {
+  let req = request::Request::req_to_hyper(wrk_req).await.unwrap();
+  let hyper_resp = handle_request::<GraphQLRequest>(req, get_option().await.unwrap().clone())
+    .await
+    .unwrap();
+
+  response::Response::hyper_to_response(hyper_resp).await.unwrap()
 }
 
 async fn get_option() -> Option<Arc<ServerContext>> {
   SERV_CTX.read().unwrap().clone()
 }
-
-async fn make_request(response: hyper::Response<hyper::Body>) -> Result<Response> {
-  let buf = hyper::body::to_bytes(response).await.map_err(conv_err)?;
-  let text = std::str::from_utf8(&buf).map_err(conv_err)?;
-  let mut response = Response::ok(text).map_err(conv_err)?;
-  response
-    .headers_mut()
-    .append("Content-Type", "text/html")
-    .map_err(conv_err)?;
-  Ok(response)
-}
-
-fn convert_method(worker_method: Method) -> hyper::Method {
-  let method_str = &*worker_method.to_string().to_uppercase();
-
-  match method_str {
-    "GET" => Ok(hyper::Method::GET),
-    "POST" => Ok(hyper::Method::POST),
-    "PUT" => Ok(hyper::Method::PUT),
-    "DELETE" => Ok(hyper::Method::DELETE),
-    "HEAD" => Ok(hyper::Method::HEAD),
-    "OPTIONS" => Ok(hyper::Method::OPTIONS),
-    "PATCH" => Ok(hyper::Method::PATCH),
-    "CONNECT" => Ok(hyper::Method::CONNECT),
-    "TRACE" => Ok(hyper::Method::TRACE),
-    _ => Err("Unsupported HTTP method"),
-  }
-  .unwrap()
-}
-
-async fn convert_to_hyper_request(worker_request: Request, body: String) -> Result<hyper::Request<hyper::Body>> {
-  let method = worker_request.method();
-  let uri = worker_request.url()?.as_str().to_string();
-  let headers = worker_request.headers();
-  let mut builder = hyper::Request::builder().method(convert_method(method)).uri(uri);
-  for (k, v) in headers {
-    builder = builder.header(k, v);
-  }
-  builder.body(hyper::body::Body::from(body)).map_err(conv_err)
-}
-
 fn conv_err<T: std::fmt::Display>(e: T) -> Error {
-  Error::from(format!("{}", e.to_string()))
+  Error::from(format!("{}", e))
 }

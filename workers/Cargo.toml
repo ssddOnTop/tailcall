@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [package.metadata.wasm-pack.profile.release]
-opt-level = "z"
+wasm-opt = false
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -17,6 +17,12 @@ lazy_static = { version = "1.4.0", features = [] }
 lru = "0.12.1"
 wasm-timer = "0.2.5"
 tokio = {features = ["rt"], version = "1.35.1"}
+cached = {version = "0.46.1",features = ["proc_macro", "wasm", "async"],default-features = false}
+serde_json = {version = "1.0.108",features = []}
+serde = {version = "1.0.193",features = ["derive"]}
+anyhow = "1.0.76"
+reqwest = { version = "0.11.22", features = [] }
+async-std = {version = "1.12.0",features = ["unstable"]}
 
 [profile.release]
 lto = true
