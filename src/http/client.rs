@@ -9,6 +9,7 @@ use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use super::Response;
 use crate::config::Upstream;
 
+
 #[async_trait::async_trait]
 pub trait HttpClient: Sync + Send {
   async fn execute(&self, req: reqwest::Request) -> anyhow::Result<Response>;
@@ -58,8 +59,9 @@ impl DefaultHttpClient {
   }
   #[cfg(not(feature = "default"))]
   async fn tc_execute_wasm(client: ClientWithMiddleware, request: reqwest::Request) -> anyhow::Result<Response> {
-    let response = client.execute(request).await?;
-    Response::from_response(response).await
+    super::wasm_cache::middleware::WasmMiddleware::execute(client, request).await
+    /* let response = client.execute(request).await?;
+    Response::from_response(response).await*/
   }
 }
 #[cfg(feature = "default")]

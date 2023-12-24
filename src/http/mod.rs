@@ -7,15 +7,19 @@ mod http_1;
 #[cfg(feature = "default")]
 mod http_2;
 mod method;
+mod req_resp;
 mod request_context;
 mod request_handler;
 mod request_template;
-mod response;
 #[cfg(feature = "default")]
 mod server;
 #[cfg(feature = "default")]
 mod server_config;
 mod server_context;
+#[cfg(not(feature = "default"))]
+mod wasm_cache;
+#[cfg(not(feature = "default"))]
+pub use req_resp::request::*;
 
 use std::time::Duration;
 
@@ -23,14 +27,16 @@ use cache_control::{Cachability, CacheControl};
 pub use client::*;
 pub use data_loader::*;
 pub use data_loader_request::*;
-use hyper::header::CACHE_CONTROL;
+use http::header::CACHE_CONTROL;
 pub use method::Method;
+
+pub use req_resp::response::*;
 pub use request_context::RequestContext;
 pub use request_handler::handle_request;
 pub use request_template::RequestTemplate;
-pub use response::*;
 #[cfg(feature = "default")]
 pub use server::Server;
+
 pub use server_context::ServerContext;
 
 #[cfg(feature = "default")]
@@ -93,18 +99,18 @@ mod tests {
 
   use std::time::Duration;
 
-  use hyper::HeaderMap;
+  use http::header::HeaderMap;
 
   use crate::http::Response;
 
   fn cache_control_header(i: i32) -> HeaderMap {
-    let mut headers = reqwest::header::HeaderMap::default();
+    let mut headers = http::header::HeaderMap::default();
     headers.append("Cache-Control", format!("max-age={}", i).parse().unwrap());
     headers
   }
 
   fn cache_control_header_visibility(i: i32, visibility: &str) -> HeaderMap {
-    let mut headers = reqwest::header::HeaderMap::default();
+    let mut headers = http::header::HeaderMap::default();
     headers.append(
       "Cache-Control",
       format!("max-age={}, {}", i, visibility).parse().unwrap(),

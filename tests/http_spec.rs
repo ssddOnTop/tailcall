@@ -10,10 +10,10 @@ use std::{fs, panic};
 use anyhow::{anyhow, Context};
 use async_graphql_value::ConstValue;
 use derive_setters::Setters;
+use http::header::{HeaderName, HeaderValue};
 use hyper::body::Bytes;
 use hyper::{Body, Request};
 use pretty_assertions::assert_eq;
-use reqwest::header::{HeaderName, HeaderValue};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tailcall::async_graphql_hyper::{GraphQLBatchRequest, GraphQLRequest};
@@ -222,7 +222,7 @@ impl HttpClient for MockHttpClient {
     let mock_response = mock.response.clone();
 
     // Build the response with the status code from the mock.
-    let status_code = reqwest::StatusCode::from_u16(mock_response.0.status)?;
+    let status_code = http::StatusCode::from_u16(mock_response.0.status)?;
 
     if status_code.is_client_error() || status_code.is_server_error() {
       return Err(anyhow::format_err!("Status code error"));

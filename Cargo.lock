@@ -238,7 +238,7 @@ dependencies = [
  "futures-timer",
  "futures-util",
  "handlebars",
- "http",
+ "http 0.2.11",
  "indexmap",
  "lru 0.7.8",
  "mime",
@@ -1524,7 +1524,7 @@ dependencies = [
  "futures-core",
  "futures-sink",
  "futures-util",
- "http",
+ "http 0.2.11",
  "indexmap",
  "slab",
  "tokio",
@@ -1604,13 +1604,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "http"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b32afd38673a8016f7c9ae69e5af41a58f81b1d31689040f2f1959594ce194ea"
+dependencies = [
+ "bytes",
+ "fnv",
+ "itoa",
+]
+
+[[package]]
 name = "http-body"
 version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d5f38f16d184e36f2408a55281cd658ecbd3ca05cce6d6510a176eca393e26d1"
 dependencies = [
  "bytes",
- "http",
+ "http 0.2.11",
  "pin-project-lite",
 ]
 
@@ -1622,8 +1633,8 @@ checksum = "57bae69908277d47122334bf6009e514cd3d24e65d0bf2b56f1b45db6ad8864d"
 dependencies = [
  "async-trait",
  "bincode",
- "http",
- "http-cache-semantics",
+ "http 0.2.11",
+ "http-cache-semantics 1.0.2",
  "httpdate",
  "moka",
  "serde",
@@ -1638,9 +1649,9 @@ checksum = "ee5a40915f9da8f3feef6f942f9aace74393803c47bce6870f19cd2b5123f27a"
 dependencies = [
  "anyhow",
  "async-trait",
- "http",
+ "http 0.2.11",
  "http-cache",
- "http-cache-semantics",
+ "http-cache-semantics 1.0.2",
  "reqwest",
  "reqwest-middleware",
  "serde",
@@ -1654,8 +1665,20 @@ version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7aec9f678bca3f4a15194b980f20ed9bfe0dd38e8d298c65c559a93dfbd6380a"
 dependencies = [
- "http",
- "http-serde",
+ "http 0.2.11",
+ "http-serde 1.1.3",
+ "serde",
+ "time",
+]
+
+[[package]]
+name = "http-cache-semantics"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "70ff94da3d2ba0131f3992c1ebf429711f0897c91bf2547671c2876ef5417f60"
+dependencies = [
+ "http 1.0.0",
+ "http-serde 2.0.0",
  "serde",
  "time",
 ]
@@ -1666,7 +1689,17 @@ version = "1.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6f560b665ad9f1572cfcaf034f7fb84338a7ce945216d64a90fd81f046a3caee"
 dependencies = [
- "http",
+ "http 0.2.11",
+ "serde",
+]
+
+[[package]]
+name = "http-serde"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7fb7239a6d49eda628c2dfdd7e982c59b0c3f0fb99ce45c4237f02a520030688"
+dependencies = [
+ "http 1.0.0",
  "serde",
 ]
 
@@ -1727,7 +1760,7 @@ dependencies = [
  "futures-core",
  "futures-util",
  "h2",
- "http",
+ "http 0.2.11",
  "http-body",
  "httparse",
  "httpdate",
@@ -1747,7 +1780,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec3efd23720e2049821a693cbc7e65ea87c72f1c58ff2f9522ff332b1491e590"
 dependencies = [
  "futures-util",
- "http",
+ "http 0.2.11",
  "hyper",
  "log",
  "rustls",
@@ -1889,7 +1922,7 @@ dependencies = [
  "encoding_rs",
  "event-listener 2.5.3",
  "futures-lite 1.13.0",
- "http",
+ "http 0.2.11",
  "log",
  "mime",
  "once_cell",
@@ -2231,7 +2264,7 @@ dependencies = [
  "bytes",
  "encoding_rs",
  "futures-util",
- "http",
+ "http 0.2.11",
  "httparse",
  "log",
  "memchr",
@@ -2877,7 +2910,7 @@ dependencies = [
  "futures-core",
  "futures-util",
  "h2",
- "http",
+ "http 0.2.11",
  "http-body",
  "hyper",
  "hyper-rustls",
@@ -2917,7 +2950,7 @@ checksum = "88a3e86aa6053e59030e7ce2d2a3b258dd08fc2d337d52f73f6cb480f5858690"
 dependencies = [
  "anyhow",
  "async-trait",
- "http",
+ "http 0.2.11",
  "reqwest",
  "serde",
  "task-local-extensions",
@@ -3426,6 +3459,7 @@ dependencies = [
  "async-std",
  "async-trait",
  "cache_control",
+ "chrono",
  "clap",
  "colored",
  "criterion",
@@ -3436,12 +3470,15 @@ dependencies = [
  "futures-channel",
  "futures-timer",
  "futures-util",
+ "http 1.0.0",
  "http-cache-reqwest",
+ "http-cache-semantics 2.0.1",
  "httpmock",
  "hyper",
  "hyper-rustls",
  "indexmap",
  "inquire",
+ "lazy_static",
  "log",
  "lru 0.12.1",
  "mimalloc",
@@ -3467,6 +3504,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "url",
+ "wasm-timer",
  "webbrowser",
  "worker",
 ]
@@ -4304,7 +4342,7 @@ dependencies = [
  "chrono-tz",
  "futures-channel",
  "futures-util",
- "http",
+ "http 0.2.11",
  "js-sys",
  "matchit",
  "pin-project",
