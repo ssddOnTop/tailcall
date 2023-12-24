@@ -1,8 +1,10 @@
 use std::collections::HashMap;
+use std::num::NonZeroUsize;
 use std::sync::RwLock;
 
 use http::HeaderMap;
 use http_cache_semantics::CachePolicy;
+use lru::LruCache;
 
 use crate::http::{Request, Response};
 
@@ -13,12 +15,12 @@ pub struct CacheEntry {
   cached_at: u64,
 }
 pub struct Cache {
-  storage: RwLock<HashMap<Request, CacheEntry>>,
+  storage: RwLock<LruCache<Request, CacheEntry>>,
 }
 
 impl Cache {
   pub fn new() -> Cache {
-    Cache { storage: RwLock::new(HashMap::new()) }
+    Cache { storage: RwLock::new(LruCache::new(NonZeroUsize::new(100).unwrap())) }
   }
   pub fn insert(&self, request: Request, response: Response) {
     // ttl remaining
@@ -28,10 +30,10 @@ impl Cache {
     }*/
     let entry = CacheEntry { response, cached_at: 0 };
     let mut storage = self.storage.write().unwrap();
-    storage.insert(request, entry);
+    storage.put(request, entry);
   }
   pub fn get(&self, request: &Request) -> Option<Response> {
-    let storage = self.storage.read().unwrap();
+    let mut storage = self.storage.write().unwrap();
     return storage.get(request).map(|entry| entry.response.clone());
   }
   fn is_cachable(&self, request: &Request, response: &Response) -> (bool, CachePolicy) {
