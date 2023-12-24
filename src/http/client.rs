@@ -9,7 +9,6 @@ use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use super::Response;
 use crate::config::Upstream;
 
-
 #[async_trait::async_trait]
 pub trait HttpClient: Sync + Send {
   async fn execute(&self, req: reqwest::Request) -> anyhow::Result<Response>;

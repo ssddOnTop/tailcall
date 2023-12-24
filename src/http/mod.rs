@@ -18,9 +18,6 @@ mod server_config;
 mod server_context;
 #[cfg(not(feature = "default"))]
 mod wasm_cache;
-#[cfg(not(feature = "default"))]
-pub use req_resp::request::*;
-
 use std::time::Duration;
 
 use cache_control::{Cachability, CacheControl};
@@ -29,14 +26,14 @@ pub use data_loader::*;
 pub use data_loader_request::*;
 use http::header::CACHE_CONTROL;
 pub use method::Method;
-
+#[cfg(not(feature = "default"))]
+pub use req_resp::request::*;
 pub use req_resp::response::*;
 pub use request_context::RequestContext;
 pub use request_handler::handle_request;
 pub use request_template::RequestTemplate;
 #[cfg(feature = "default")]
 pub use server::Server;
-
 pub use server_context::ServerContext;
 
 #[cfg(feature = "default")]

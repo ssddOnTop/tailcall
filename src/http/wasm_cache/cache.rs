@@ -1,11 +1,8 @@
 use std::collections::HashMap;
 use std::sync::RwLock;
 
-
-
 use http::HeaderMap;
 use http_cache_semantics::CachePolicy;
-
 
 use crate::http::{Request, Response};
 
