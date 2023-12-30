@@ -3334,6 +3334,7 @@ dependencies = [
  "indexmap",
  "log",
  "lru 0.12.1",
+ "mini-v8",
  "nom",
  "num_cpus",
  "once_cell",
