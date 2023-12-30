@@ -7,8 +7,8 @@ use crate::http::Response;
 
 #[async_trait::async_trait]
 impl HttpClient for DefaultHttpClient {
-  async fn execute(&self, req: reqwest::Request, option: Option<ProtobufOperation>) -> anyhow::Result<Response> {
-    async_std::task::spawn_local(execute(self.client.clone(), req)).await
+  async fn execute(&self, req: reqwest::Request, operation: Option<ProtobufOperation>) -> anyhow::Result<Response> {
+    async_std::task::spawn_local(execute(self.client.clone(), req, operation)).await
   }
 }
 
@@ -34,8 +34,8 @@ impl DefaultHttpClient {
   }
 }
 
-async fn execute(client: ClientWithMiddleware, request: reqwest::Request) -> anyhow::Result<Response> {
+async fn execute(client: ClientWithMiddleware, request: reqwest::Request, operation: Option<ProtobufOperation>) -> anyhow::Result<Response> {
   let response = client.execute(request).await?;
-  let response = Response::from_response(response).await?;
+  let response = Response::from_response(response, operation).await?;
   Ok(response)
 }
