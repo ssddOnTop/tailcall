@@ -30,7 +30,6 @@ futures-channel = { version = "0.3.29" }
 futures-timer = { version = "3.0.2" }
 futures-util = { version = "0.3.29" }
 ttl_cache = "0.5.1"
-prettytable-rs = "^0.10"
 protox = "0.5.1"
 prost-reflect = { version = "0.12.0", features = ["serde"] }
 prost = "0.12.3"
