@@ -23,8 +23,7 @@ pub fn run() -> Result<()> {
 
   match cli.command {
     Command::Start { file_paths } => {
-      let config =
-        tokio::runtime::Runtime::new()?.block_on(Config::read_from_files(file_paths.iter()))?;
+      let config = tokio::runtime::Runtime::new()?.block_on(Config::read_from_files(file_paths.iter()))?;
       log::info!("N + 1: {}", config.n_plus_one().len().to_string());
       let runtime = Builder::new_multi_thread()
         .worker_threads(config.server.get_workers())
@@ -35,8 +34,7 @@ pub fn run() -> Result<()> {
       Ok(())
     }
     Command::Check { file_path, n_plus_one_queries, schema, out_file_path } => {
-      let config =
-        tokio::runtime::Runtime::new()?.block_on(Config::read_from_files(file_path.iter()))?;
+      let config = tokio::runtime::Runtime::new()?.block_on(Config::read_from_files(file_path.iter()))?;
       let blueprint = Blueprint::try_from(&config).map_err(CLIError::from);
       match blueprint {
         Ok(blueprint) => {
