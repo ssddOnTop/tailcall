@@ -1,5 +1,5 @@
 use anyhow::Result;
-#[cfg(feature = "default")]
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::{fs::File, io::AsyncWriteExt};
 
 use crate::config::{Config, Source};
@@ -19,9 +19,9 @@ impl ConfigWriter {
       Source::Json => self.config.to_json(true)?,
       Source::Yml => self.config.to_yaml()?,
     };
-    #[cfg(feature = "default")]
+    #[cfg(not(target_arch = "wasm32"))]
     let mut file = File::create(filename).await?;
-    #[cfg(feature = "default")]
+    #[cfg(not(target_arch = "wasm32"))]
     file.write_all(contents.as_bytes()).await?;
 
     Ok(())

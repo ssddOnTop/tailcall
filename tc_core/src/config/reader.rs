@@ -1,5 +1,5 @@
 use anyhow::anyhow;
-#[cfg(feature = "default")]
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::{fs::File, io::AsyncReadExt};
 use url::Url;
 
@@ -18,12 +18,11 @@ impl ConfigReader {
     Self { file_paths: file_paths.map(|path| path.as_ref().to_owned()).collect() }
   }
   pub async fn read(&self) -> anyhow::Result<Config> {
-    #[cfg(feature = "default")]
-    return self.read_cli().await;
-    #[cfg(not(feature = "default"))]
+    #[cfg(target_arch = "wasm32")]
     return self.read_wasm().await;
+    return self.read_cli().await;
   }
-  #[cfg(feature = "default")]
+  #[cfg(not(target_arch = "wasm32"))]
   async fn read_cli(&self) -> anyhow::Result<Config> {
     let mut config = Config::default();
     for path in &self.file_paths {
@@ -37,7 +36,7 @@ impl ConfigReader {
     }
     Ok(config)
   }
-  #[cfg(not(feature = "default"))]
+  #[cfg(target_arch = "wasm32")]
   async fn read_wasm(&self) -> anyhow::Result<Config> {
     let mut config = Config::default();
     for path in &self.file_paths {
@@ -47,12 +46,12 @@ impl ConfigReader {
     }
     Ok(config)
   }
-  #[cfg(feature = "default")]
+  #[cfg(not(target_arch = "wasm32"))]
   async fn from_file_path(file_path: &str) -> anyhow::Result<Config> {
     let (server_sdl, source) = ConfigReader::read_file(file_path).await?;
     Config::from_source(source, &server_sdl)
   }
-  #[cfg(feature = "default")]
+  #[cfg(not(target_arch = "wasm32"))]
   async fn read_file(file_path: &str) -> anyhow::Result<(String, Source)> {
     let mut f = File::open(file_path).await?;
     let mut buffer = Vec::new();

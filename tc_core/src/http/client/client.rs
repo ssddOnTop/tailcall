@@ -1,6 +1,6 @@
-#[cfg(feature = "default")]
+#[cfg(not(target_arch = "wasm32"))]
 pub use super::client_cli::*;
-#[cfg(not(feature = "default"))]
+#[cfg(target_arch = "wasm32")]
 pub use super::client_wasm::*;
 use crate::http::Response;
 

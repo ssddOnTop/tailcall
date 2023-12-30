@@ -1,7 +1,7 @@
 pub mod client;
-#[cfg(feature = "default")]
+#[cfg(not(target_arch = "wasm32"))]
 mod client_cli;
-#[cfg(not(feature = "default"))]
+#[cfg(target_arch = "wasm32")]
 mod client_wasm;
 
 pub use client::*;
