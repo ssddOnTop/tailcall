@@ -17,6 +17,7 @@ impl ConfigReader {
   {
     Self { file_paths: file_paths.map(|path| path.as_ref().to_owned()).collect() }
   }
+  #[allow(clippy::needless_return)]
   pub async fn read(&self) -> anyhow::Result<Config> {
     #[cfg(target_arch = "wasm32")]
     return self.read_wasm().await;
