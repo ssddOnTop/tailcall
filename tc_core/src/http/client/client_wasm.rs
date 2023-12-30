@@ -2,16 +2,13 @@ use reqwest::Client;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 
 use super::client::HttpClient;
+use crate::grpc::protobuf::ProtobufOperation;
 use crate::http::Response;
 
 #[async_trait::async_trait]
 impl HttpClient for DefaultHttpClient {
-  async fn execute(&self, request: reqwest::Request) -> anyhow::Result<Response> {
-    async_std::task::spawn_local(execute(self.client.clone(), request)).await
-  }
-
-  async fn execute_raw(&self, request: reqwest::Request) -> anyhow::Result<reqwest::Response> {
-    unimplemented!()
+  async fn execute(&self, req: reqwest::Request, option: Option<ProtobufOperation>) -> anyhow::Result<Response> {
+    async_std::task::spawn_local(execute(self.client.clone(), req)).await
   }
 }
 

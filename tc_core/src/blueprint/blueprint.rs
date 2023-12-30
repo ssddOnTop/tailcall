@@ -164,7 +164,7 @@ impl FieldDefinition {
 #[derive(Clone, Debug)]
 pub struct Directive {
   pub name: String,
-  pub arguments: HashMap<String, Value>,
+  pub arguments: HashMap<String, serde_json::Value>,
   pub index: usize,
 }
 
