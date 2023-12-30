@@ -30,6 +30,7 @@ futures-channel = { version = "0.3.29" }
 futures-timer = { version = "3.0.2" }
 futures-util = { version = "0.3.29" }
 ttl_cache = "0.5.1"
+prettytable-rs = "^0.10"
 protox = "0.5.1"
 prost-reflect = { version = "0.12.0", features = ["serde"] }
 prost = "0.12.3"
@@ -41,13 +42,11 @@ num_cpus = "1.16.0"
 async-std = { version = "1.12.0",features = ["unstable","wasm-bindgen-futures"] }
 tokio = { version = "1.35.1",features = ["rt","time"] }
 
-mini-v8 = { version = "0.4.1", optional = true }
 http-cache-reqwest = { version = "0.12.0", features = ["manager-moka"], default-features = false, optional = true}
 reqwest-middleware = { version = "0.2.4"}
 
 [features]
 default = ["http-cache-reqwest","tokio/fs"]
-unsafe-js = ["dep:mini-v8"]
 
 [dev-dependencies]
 fnv = "1.0.7"
