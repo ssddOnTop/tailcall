@@ -1,6 +1,6 @@
 extern crate core;
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::panic::AssertUnwindSafe;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -98,9 +98,6 @@ struct HttpSpec {
   mock: Vec<Mock>,
 
   #[serde(default)]
-  env: HashMap<String, String>,
-
-  #[serde(default)]
   expected_upstream_requests: Vec<UpstreamRequest>,
   assert: Vec<DownstreamAssertion>,
 
@@ -123,7 +120,6 @@ impl HttpSpec {
         let contents = fs::read_to_string(&path)?;
         let spec: HttpSpec =
           Self::from_source(source, contents).map_err(|err| err.context(path.to_str().unwrap().to_string()))?;
-
         files.push(spec.path(path));
       }
     }
@@ -163,13 +159,12 @@ impl HttpSpec {
         .init();
     });
 
-    let spec: HttpSpec = match source {
+    let spec = match source {
       Source::Json => anyhow::Ok(serde_json::from_str(&contents)?),
       Source::Yml => anyhow::Ok(serde_yaml::from_str(&contents)?),
       _ => Err(anyhow!("only json and yaml are supported")),
-    }?;
-
-    anyhow::Ok(spec)
+    };
+    anyhow::Ok(spec?)
   }
 
   async fn server_context(&self) -> Arc<ServerContext> {
@@ -180,9 +175,7 @@ impl HttpSpec {
     let blueprint = Blueprint::try_from(&config).unwrap();
     let client = Arc::new(MockHttpClient { spec: self.clone() });
     let http2_client = Arc::new(MockHttpClient { spec: self.clone() });
-    let mut server_context = ServerContext::with_http_clients(blueprint, client, http2_client);
-    server_context.env_vars = Arc::new(self.env.clone());
-
+    let server_context = ServerContext::with_http_clients(blueprint, client, http2_client);
     Arc::new(server_context)
   }
 }
@@ -221,86 +214,126 @@ fn string_to_bytes(input: &str) -> Vec<u8> {
 }
 #[async_trait::async_trait]
 impl HttpClient for MockHttpClient {
-  async fn execute(&self, req: reqwest::Request, operation: Option<ProtobufOperation>) -> anyhow::Result<Response> {
-    let mocks = self.spec.mock.clone();
+  async fn execute(&self, req: reqwest::Request, op: Option<ProtobufOperation>) -> anyhow::Result<Response> {
+    if let Some(op) = op {
+      let response = execute_raw(self.clone(), req).await?;
+      let response = Response::from_response(response, Some(op.clone())).await?;
+      Ok(response)
+    } else {
+      let mocks = self.spec.mock.clone();
 
-    // Try to find a matching mock for the incoming request.
-    let mock = mocks
-      .iter()
-      .find(|Mock { request: mock_req, response: _ }| {
-        let method_match = req.method() == mock_req.0.method.clone().to_hyper();
-        let url_match = req.url().as_str() == mock_req.0.url.clone().as_str();
-        let req_body = match req.body() {
-          Some(body) => {
-            if let Some(bytes) = body.as_bytes() {
-              if let Ok(body_str) = std::str::from_utf8(bytes) {
-                Value::from(body_str)
+      // Try to find a matching mock for the incoming request.
+      let mock = mocks
+        .iter()
+        .find(|Mock { request: mock_req, response: _ }| {
+          let method_match = req.method() == mock_req.0.method.clone().to_hyper();
+          let url_match = req.url().as_str() == mock_req.0.url.clone().as_str();
+          let req_body = match req.body() {
+            Some(body) => {
+              if let Some(bytes) = body.as_bytes() {
+                if let Ok(body_str) = std::str::from_utf8(bytes) {
+                  Value::from(body_str)
+                } else {
+                  Value::Null
+                }
               } else {
                 Value::Null
               }
+            }
+            None => Value::Null,
+          };
+          let body_match = req_body == mock_req.0.body;
+          method_match && url_match && body_match
+        })
+        .ok_or(anyhow!(
+          "No mock found for request: {:?} {} in {}",
+          req.method(),
+          req.url(),
+          format!("{}", self.spec.path.to_str().unwrap())
+        ))?;
+
+      // Clone the response from the mock to avoid borrowing issues.
+      let mock_response = mock.response.clone();
+
+      // Build the response with the status code from the mock.
+      let status_code = reqwest::StatusCode::from_u16(mock_response.0.status)?;
+
+      if status_code.is_client_error() || status_code.is_server_error() {
+        return Err(anyhow::format_err!("Status code error"));
+      }
+
+      let mut response = Response { status: status_code, ..Default::default() };
+
+      // Insert headers from the mock into the response.
+      for (key, value) in mock_response.0.headers {
+        let header_name = HeaderName::from_str(&key)?;
+        let header_value = HeaderValue::from_str(&value)?;
+        response.headers.insert(header_name, header_value);
+      }
+
+      // Set the body of the response.
+      response.body = ConstValue::try_from(serde_json::from_value::<Value>(mock_response.0.body)?)?;
+
+      Ok(response)
+    }
+  }
+}
+async fn execute_raw(a: MockHttpClient, req: reqwest::Request) -> anyhow::Result<reqwest::Response> {
+  let mocks = a.spec.mock.clone();
+
+  // Try to find a matching mock for the incoming request.
+  let mock = mocks
+    .iter()
+    .find(|Mock { request: mock_req, response: _ }| {
+      let method_match = req.method() == mock_req.0.method.clone().to_hyper();
+      let url_match = req.url().as_str() == mock_req.0.url.clone().as_str();
+      let req_body = match req.body() {
+        Some(body) => {
+          if let Some(bytes) = body.as_bytes() {
+            if let Ok(body_str) = std::str::from_utf8(bytes) {
+              Value::from(body_str)
             } else {
               Value::Null
             }
+          } else {
+            Value::Null
           }
-          None => Value::Null,
-        };
-        let _body_match = req_body == mock_req.0.body;
-        method_match && url_match // && body_match
-      })
-      .ok_or(anyhow!(
-        "No mock found for request: {:?} {} in {}",
-        req.method(),
-        req.url(),
-        format!("{}", self.spec.path.to_str().unwrap())
-      ))?;
+        }
+        None => Value::Null,
+      };
+      let _body_match = req_body == mock_req.0.body;
+      method_match && url_match // && body_match
+    })
+    .ok_or(anyhow!(
+      "No mock found for request: {:?} {} in {}",
+      req.method(),
+      req.url(),
+      format!("{}", a.spec.path.to_str().unwrap())
+    ))?;
 
-    // Clone the response from the mock to avoid borrowing issues.
-    let mock_response = mock.response.clone();
+  // Clone the response from the mock to avoid borrowing issues.
+  let mock_response = mock.response.clone();
 
-    // Build the response with the status code from the mock.
-    let status_code = reqwest::StatusCode::from_u16(mock_response.0.status)?;
+  // Build the response with the status code from the mock.
+  let status_code = reqwest::StatusCode::from_u16(mock_response.0.status)?;
 
-    if status_code.is_client_error() || status_code.is_server_error() {
-      return Err(anyhow::format_err!("Status code error"));
-    }
-
-    let mut response = Response { status: status_code, ..Default::default() };
-    // Insert headers from the mock into the response.
-    for (key, value) in mock_response.0.headers {
-      let header_name = HeaderName::from_str(&key)?;
-      let header_value = HeaderValue::from_str(&value)?;
-      response.headers.insert(header_name, header_value);
-    }
-
-    // Set the body of the response.
-    /*    let body = match operation {
-      Some(operation) => {
-        println!("here: {}",mock_response.0.body.to_string());
-        let bytes = string_to_bytes(&mock_response.0.body.to_string());
-        println!("here1: {:?}",String::from_utf8(bytes.clone()));
-        let v = operation.convert_output(&bytes);
-        println!("theerr: {:?}",v);
-        v?
-      }
-      None => {
-        // let x = string_to_bytes(body.clone());
-        // println!("{:?}",x);
-        ConstValue::try_from(serde_json::from_value::<Value>(mock_response.0.body)?)?
-      }
-    };*/
-    if let Some(op) = operation {
-      // println!("here: {:?}",op.convert_output(&string_to_bytes(&mock_response.0.body.to_string())));
-      // println!("here1: {:?}",op.convert_output(&string_to_bytes(&mock_response.0.body.as_str().unwrap_or_default())));
-      // println!("here2: {:?}",op.convert_output(mock_response.0.body.as_str().unwrap_or_default().as_bytes()));
-      let body = op.convert_output(&string_to_bytes(mock_response.0.body.as_str().unwrap_or_default()))?;
-      println!("here3: {}", body);
-      response.body = body;
-      return Ok(response);
-    }
-    println!("nothere");
-    response.body = ConstValue::try_from(mock_response.0.body)?;
-    Ok(response)
+  if status_code.is_client_error() || status_code.is_server_error() {
+    return Err(anyhow::format_err!("Status code error"));
   }
+
+  let mut response = hyper::Response::builder().status(status_code);
+  let headers = response.headers_mut().ok_or(anyhow!("Invalid headers"))?;
+  // Insert headers from the mock into the response.
+  for (key, value) in mock_response.0.headers {
+    let header_name = HeaderName::from_str(&key)?;
+    let header_value = HeaderValue::from_str(&value)?;
+    headers.insert(header_name, header_value);
+  }
+
+  let body = mock_response.0.body.as_str().unwrap_or_default();
+  let res = response.body(Body::from(string_to_bytes(body)))?;
+
+  Ok(reqwest::Response::from(res))
 }
 
 async fn assert_downstream(spec: HttpSpec) {
@@ -381,7 +414,7 @@ async fn http_spec_e2e() -> anyhow::Result<()> {
   let spec = HttpSpec::filter_specs(spec);
   let tasks: Vec<_> = spec
     .into_iter()
-    .map(|spec| tokio::spawn(assert_downstream(spec)))
+    .map(|spec| tokio::spawn(async move { assert_downstream(spec).await }))
     .collect();
   for task in tasks {
     task.await?;

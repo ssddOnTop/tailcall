@@ -34,7 +34,11 @@ impl DefaultHttpClient {
   }
 }
 
-async fn execute(client: ClientWithMiddleware, request: reqwest::Request, operation: Option<ProtobufOperation>) -> anyhow::Result<Response> {
+async fn execute(
+  client: ClientWithMiddleware,
+  request: reqwest::Request,
+  operation: Option<ProtobufOperation>,
+) -> anyhow::Result<Response> {
   let response = client.execute(request).await?;
   let response = Response::from_response(response, operation).await?;
   Ok(response)
