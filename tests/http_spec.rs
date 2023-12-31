@@ -1,6 +1,6 @@
 extern crate core;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::panic::AssertUnwindSafe;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -98,6 +98,9 @@ struct HttpSpec {
   mock: Vec<Mock>,
 
   #[serde(default)]
+  env: HashMap<String, String>,
+
+  #[serde(default)]
   expected_upstream_requests: Vec<UpstreamRequest>,
   assert: Vec<DownstreamAssertion>,
 
@@ -175,7 +178,9 @@ impl HttpSpec {
     let blueprint = Blueprint::try_from(&config).unwrap();
     let client = Arc::new(MockHttpClient { spec: self.clone() });
     let http2_client = Arc::new(MockHttpClient { spec: self.clone() });
-    let server_context = ServerContext::with_http_clients(blueprint, client, http2_client);
+    let mut server_context = ServerContext::with_http_clients(blueprint, client, http2_client);
+    server_context.env_vars = Arc::new(self.env.clone());
+
     Arc::new(server_context)
   }
 }
