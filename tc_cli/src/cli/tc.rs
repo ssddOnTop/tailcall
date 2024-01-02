@@ -23,8 +23,7 @@ pub fn run() -> Result<()> {
 
   match cli.command {
     Command::Start { file_paths } => {
-      let config =
-        tokio::runtime::Runtime::new()?.block_on(async { Config::read_from_files(file_paths.iter()).await })?;
+      let config = tokio::runtime::Runtime::new()?.block_on(Config::read_from_files(file_paths.iter()))?;
       log::info!("N + 1: {}", config.n_plus_one().len().to_string());
       let runtime = Builder::new_multi_thread()
         .worker_threads(config.server.get_workers())
@@ -35,8 +34,7 @@ pub fn run() -> Result<()> {
       Ok(())
     }
     Command::Check { file_path, n_plus_one_queries, schema, out_file_path } => {
-      let config =
-        tokio::runtime::Runtime::new()?.block_on(async { Config::read_from_files(file_path.iter()).await })?;
+      let config = tokio::runtime::Runtime::new()?.block_on(Config::read_from_files(file_path.iter()))?;
       let blueprint = Blueprint::try_from(&config).map_err(CLIError::from);
       match blueprint {
         Ok(blueprint) => {
@@ -45,7 +43,7 @@ pub fn run() -> Result<()> {
             display_schema(&blueprint);
           }
           if let Some(out_file) = out_file_path {
-            tokio::runtime::Runtime::new()?.block_on(async { config.write_file(&out_file).await })?;
+            tokio::runtime::Runtime::new()?.block_on(config.write_file(&out_file))?;
             Fmt::display(Fmt::success(
               &format!("Schema has been written to {}", out_file).to_string(),
             ));
@@ -55,7 +53,7 @@ pub fn run() -> Result<()> {
         Err(e) => Err(e.into()),
       }
     }
-    Command::Init { file_path } => Ok(tokio::runtime::Runtime::new()?.block_on(async { init(&file_path).await })?),
+    Command::Init { file_path } => Ok(tokio::runtime::Runtime::new()?.block_on(init(&file_path))?),
   }
 }
 

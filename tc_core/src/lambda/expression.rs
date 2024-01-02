@@ -202,7 +202,7 @@ async fn execute_raw_request<'ctx, Ctx: ResolverContextLike<'ctx>>(
     ctx
       .req_ctx
       .universal_http_client
-      .execute(req)
+      .execute(req, None)
       .await
       .map_err(|e| EvaluationError::IOException(e.to_string()))?,
   )
@@ -264,7 +264,7 @@ async fn execute_request_with_dl<
     .clone()
     .map(|s| s.headers)
     .unwrap_or_default();
-  let endpoint_key = crate::http::DataLoaderRequest::new(req, headers);
+  let endpoint_key = DataLoaderRequest::new(req, headers);
 
   Ok(
     data_loader
